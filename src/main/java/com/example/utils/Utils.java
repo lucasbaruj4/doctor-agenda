@@ -2,11 +2,13 @@ package com.example.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -14,127 +16,107 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
 @Component
 public class Utils {
 
+    private static final String SECRET_KEY = "starbox@t5_#8256no";
+
     public String Encriptar(String texto) {
-        String dato = "";
-        String llave = "starbox@t5_#8256no";
-        Logger logger = Logger.getLogger(this.getClass().getName());
-    
         try {
             if (texto == null || texto.trim().isEmpty()) {
-                logger.log(Level.SEVERE, "El texto a encriptar no puede ser nulo o vacío");
-                return dato; // Salir temprano si el texto está vacío
+                return "";
             }
-    
-            logger.log(Level.INFO, "Texto original recibido para encriptar: {0}", texto);
-    
+
             // Generar digest de la llave
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digestOfPassword = md.digest(llave.getBytes("utf-8"));
-            logger.log(Level.INFO, "Digest de la llave generado: {0}", Arrays.toString(digestOfPassword));
-    
+            byte[] digestOfPassword = md.digest(SECRET_KEY.getBytes("utf-8"));
+
             // Crear clave a partir del digest
-            byte[] keyBytes = Arrays.copyOf(digestOfPassword, 16); // Cambiar a 16 bytes para AES-128
+            byte[] keyBytes = Arrays.copyOf(digestOfPassword, 16);
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
-            logger.log(Level.INFO, "Clave generada para encriptación: {0}", Arrays.toString(keyBytes));
-    
+
             // Configurar Cipher para encriptación
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, key);
-            logger.log(Level.INFO, "Cipher inicializado para encriptación");
-    
+
             // Encriptar el texto
             byte[] plainTextBytes = texto.getBytes("utf-8");
             byte[] encryptedBytes = cipher.doFinal(plainTextBytes);
-            logger.log(Level.INFO, "Bytes encriptados: {0}", Arrays.toString(encryptedBytes));
-    
+
             // Codificar en Base64
-            byte[] baseDato = Base64.encodeBase64(encryptedBytes);
-            dato = new String(baseDato, "utf-8");
-            logger.log(Level.INFO, "Texto encriptado en Base64: {0}", dato);
-    
-        } catch (UnsupportedEncodingException ex) {
-            logger.log(Level.SEVERE, "Codificación no soportada", ex);
-        } catch (NoSuchAlgorithmException ex) {
-            logger.log(Level.SEVERE, "Algoritmo no encontrado", ex);
-        } catch (NoSuchPaddingException ex) {
-            logger.log(Level.SEVERE, "Padding no soportado", ex);
-        } catch (InvalidKeyException ex) {
-            logger.log(Level.SEVERE, "Clave inválida", ex);
-        } catch (IllegalBlockSizeException ex) {
-            logger.log(Level.SEVERE, "El tamaño del bloque no es válido", ex);
-        } catch (BadPaddingException ex) {
-            logger.log(Level.SEVERE, "Error de padding durante la encriptación", ex);
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Error inesperado durante la encriptación", ex);
+            return new String(Base64.encodeBase64(encryptedBytes), "utf-8");
+
+        } catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException |
+                 InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            throw new RuntimeException("Error al encriptar el texto", e);
         }
-    
-        return dato;
     }
-    
-
-
 
     public String Desencriptar(String texto) {
-        String dato = "";
-        String llave = "starbox@t5_#8256no";
-        Logger logger = Logger.getLogger(this.getClass().getName());
-    
         try {
             if (texto == null || texto.trim().isEmpty()) {
-                logger.log(Level.SEVERE, "El texto cifrado no puede ser nulo o vacío");
-                return dato; // Salir temprano si el texto está vacío
+                return "";
             }
-    
-            logger.log(Level.INFO, "Texto cifrado recibido: {0}", texto);
-    
+
             // Decodificar el texto cifrado desde Base64
             byte[] message = Base64.decodeBase64(texto.getBytes("utf-8"));
-            logger.log(Level.INFO, "Bytes decodificados de Base64: {0}", Arrays.toString(message));
-    
+
             // Generar la clave secreta
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digestOfPassword = md.digest(llave.getBytes("utf-8"));
-            logger.log(Level.INFO, "Digest de la clave: {0}", Arrays.toString(digestOfPassword));
-    
-            byte[] keyBytes = Arrays.copyOf(digestOfPassword, 16); // Cambiar a 16 bytes para AES-128
+            byte[] digestOfPassword = md.digest(SECRET_KEY.getBytes("utf-8"));
+
+            byte[] keyBytes = Arrays.copyOf(digestOfPassword, 16);
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
-            logger.log(Level.INFO, "Clave generada: {0}", Arrays.toString(keyBytes));
-    
+
             // Configurar el Cipher para desencriptación
             Cipher decipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             decipher.init(Cipher.DECRYPT_MODE, key);
-            logger.log(Level.INFO, "Cipher inicializado para desencriptación");
-    
+
             // Desencriptar los bytes
             byte[] plainText = decipher.doFinal(message);
-            dato = new String(plainText, "utf-8");
-            logger.log(Level.INFO, "Texto desencriptado: {0}", dato);
-    
-        } catch (UnsupportedEncodingException ex) {
-            logger.log(Level.SEVERE, "Codificación no soportada", ex);
-        } catch (NoSuchAlgorithmException ex) {
-            logger.log(Level.SEVERE, "Algoritmo no encontrado", ex);
-        } catch (NoSuchPaddingException ex) {
-            logger.log(Level.SEVERE, "Padding no soportado", ex);
-        } catch (InvalidKeyException ex) {
-            logger.log(Level.SEVERE, "Clave inválida", ex);
-        } catch (IllegalBlockSizeException ex) {
-            logger.log(Level.SEVERE, "El tamaño del bloque no es válido", ex);
-        } catch (BadPaddingException ex) {
-            logger.log(Level.SEVERE, "Error de padding: Texto cifrado alterado o clave incorrecta", ex);
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Error inesperado", ex);
+            return new String(plainText, "utf-8");
+
+        } catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException |
+                 InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            throw new RuntimeException("Error al desencriptar el texto", e);
         }
-        return dato;
     }
-    
+
+    public  String crearJWT(String correo, String subject, int tiempo){
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+        long timeInSecs = System.currentTimeMillis();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime afterAddingMins;
+        if(tiempo==-1){
+            afterAddingMins =  now.plusYears(10);
+        }else{
+
+            afterAddingMins =  now.plusSeconds(tiempo);
+        }
+        Date dateNow = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
+
+        byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(SECRET_KEY);
+        Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
+
+        JwtBuilder builder = Jwts.builder().setId(correo)
+                .setIssuedAt(dateNow)
+                .setSubject(subject)
+                .signWith(signatureAlgorithm, signingKey);
+
+        if (timeInSecs > 0) {
+            Date exp =  Date.from(afterAddingMins.atZone(ZoneId.systemDefault()).toInstant());
+            builder.setExpiration(exp);
+        }
+
+        return builder.compact();
+    }
 }
-
-

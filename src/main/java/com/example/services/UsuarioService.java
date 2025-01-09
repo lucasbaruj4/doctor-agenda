@@ -35,7 +35,7 @@ public class UsuarioService {
                 Connection connection = dataSource.getConnection(); PreparedStatement ps = connection.prepareStatement(sb.toString()); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 listaUsuario.add(new Usuario(
-                        rs.getLong("id"), rs.getString("nombre"), rs.getString("correo"), rs.getString("contraseña")
+                        rs.getLong("id"), rs.getString("nombre"), rs.getString("correo"), rs.getString("contraseña") 
                 ));
             }
 
@@ -101,6 +101,9 @@ public class UsuarioService {
                     ps2.setString(1, usuario.getNombre());
                     ps2.setString(2, usuario.getCorreo());
                     ps2.setString(3, nuevaContra);
+                    //
+                    // String token = utils.crearJWT(usuario.getCorreo(), new Gson().toJson(usuario), -1);
+                    //
                     ps2.execute();
                     respuesta = "Usuario grabado";
                 } catch (SQLException e) {
@@ -123,20 +126,27 @@ public class UsuarioService {
             @Cleanup ResultSet rs = ps.executeQuery(); 
             if(rs.next()){
                 try (
-                PreparedStatement ps2 = connection.prepareStatement("SELECT contraseña FROM usuarios WHERE nombre = ?");
+                PreparedStatement ps2 = connection.prepareStatement("SELECT * FROM usuarios WHERE nombre = ?");
                 ){
                     ps2.setString(1, usuario.getNombre());
                     @Cleanup ResultSet rs2 = ps2.executeQuery();
-                    // String passInput = usuario.getContraseña();
+                    if(rs2.next()){
+                    String passInput = usuario.getContraseña();
                     String pass = utils.Desencriptar(rs2.getString("contraseña"));
-                    System.out.println(pass);
-                    if(usuario.getContraseña().equals(pass)){
+                    if(passInput.equals(pass)){
+                        //
+                        //String token = utils.crearJWT(usuario.getCorreo(), new Gson().toJson(usuario), -1);
+                        //
                         return usuario;
                     }else{
                         throw new RuntimeException("La contrasena es incorrecta");
                     }
+                    } else {
+                        System.out.print("La consulta no retorno nada ");
+                    }
+                    
                 } catch (Exception e) {
-                    throw new RuntimeException("PIPI");
+                    throw new RuntimeException("Error al validar al usuario "+e.getMessage());
                 }
             }
 
